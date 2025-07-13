@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Portfolio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h2>{{ username }}'s Art Portfolio</h2>
+    <a href="/add_artwork"><button>Add New Artwork</button></a>
+
+    {% if artworks %}
+    <div class="portfolio-grid">
+        {% for art in artworks %}
+        <div class="art-card">
+            {% if art.image_path %}
+                <img src="static\images\breaking bad.jpg" alt="Artwork" class="art-img">
+            {% else %}
+                <div class="art-placeholder">No Image</div>
+            {% endif %}
+            <div class="art-details">
+                <h3>{{ art.title }}</h3>
+                <p><strong>Medium:</strong> {{ art.medium }}</p>
+                <p><strong>Date:</strong> {{ art.created_on }}</p>
+                <p>{{ art.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <p>No artworks added yet.</p>
+    {% endif %}
+</body>
+</html>

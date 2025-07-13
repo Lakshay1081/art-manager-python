@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Artwork</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h2>Add New Artwork</h2>
+    <form method="POST">
+        Title: <input type="text" name="title" required><br><br>
+        Medium: <input type="text" name="medium" required><br><br>
+        Image Path: <input type="text" name="image_path"><br><br>
+        Description: <textarea name="description"></textarea><br><br>
+        Date: <input type="date" name="created_on"><br><br>
+        <button type="submit">Save Artwork</button>
+    </form>
+    <br>
+    <a href="/portfolio">View Portfolio</a>
+</body>
+</html>
