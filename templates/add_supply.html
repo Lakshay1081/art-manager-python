@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Supply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fefefe;
+            padding: 20px;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #444;
+        }
+
+        input[type="text"], input[type="number"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            background-color: #5a67d8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #434190;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Add New Art Supply</h2>
+        <form method="POST">
+            <label>Supply Name:</label>
+            <input type="text" name="name" required>
+
+            <label>Cost (₹):</label>
+            <input type="number" name="cost" step="0.01" required>
+
+            <label>Quantity:</label>
+            <input type="number" name="quantity" required>
+
+            <label>Purchase Date:</label>
+            <input type="date" name="purchase_date" required>
+
+            <button type="submit">Add Supply</button>
+        </form>
+    </div>
+</body>
+</html>

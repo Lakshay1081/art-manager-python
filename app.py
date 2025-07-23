@@ -99,8 +99,48 @@ def portfolio():
 
     return render_template('portfolio.html', username=session['username'], artworks=artworks)
 
+@app.route('template/add_supply', methods=['GET', 'POST'])
+def add_supply():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if request.method == 'POST':
+        name = request.form['name']
+        cost = request.form['cost']
+        quantity = request.form['quantity']
+        purchase_date = request.form['purchase_date']
+        user_id = session['user_id']
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO supplies (user_id, name, cost, quantity, purchase_date)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, name, cost, quantity, purchase_date))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return redirect('/supplies')
+
+    return render_template('add_supply.html')
+
+
+@app.route('/supplies')
+def supplies():
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user_id = session['user_id']
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM supplies WHERE user_id = %s ORDER BY purchase_date DESC", (user_id,))
+    supplies_data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('view_supplies.html', username=session['username'], supplies=supplies_data)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
