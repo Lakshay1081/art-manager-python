@@ -1,33 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My Portfolio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{{ username }}'s Art Portfolio</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        h2 { text-align: center; margin-top: 20px; }
+        .add-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4a63f5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .portfolio-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            width: 250px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #ddd;
+        }
+        .card-body {
+            padding: 10px;
+        }
+        .card-body p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
     <h2>{{ username }}'s Art Portfolio</h2>
-    <a href="/add_artwork"><button>Add New Artwork</button></a>
+    <a href="/add_artwork" class="add-btn">Add New Artwork</a>
 
-    {% if artworks %}
     <div class="portfolio-grid">
-        {% for art in artworks %}
-        <div class="art-card">
-            {% if art.image_path %}
-                <img src="static\images\Rohit Sharma.jpg" alt="Artwork" class="art-img">
+        {% for title, medium, image_path, description, created_on in artworks %}
+        <div class="card">
+            {% if image_path %}
+                <img src="{{ url_for('static', filename=image_path) }}" alt="{{ title }}">
             {% else %}
-                <div class="art-placeholder">No Image</div>
+                <div style="height:200px; display:flex; align-items:center; justify-content:center; background:#ddd;">No Image</div>
             {% endif %}
-            <div class="art-details">
-                <h3>{{ art.title }}</h3>
-                <p><strong>Medium:</strong> {{ art.medium }}</p>
-                <p><strong>Date:</strong> {{ art.created_on }}</p>
-                <p>{{ art.description }}</p>
+            <div class="card-body">
+                <h4>{{ title }}</h4>
+                <p><strong>Medium:</strong> {{ medium }}</p>
+                <p><strong>Date:</strong> {{ created_on }}</p>
+                <p>{{ description }}</p>
             </div>
         </div>
         {% endfor %}
     </div>
-    {% else %}
-        <p>No artworks added yet.</p>
-    {% endif %}
 </body>
 </html>

@@ -6,10 +6,10 @@
 </head>
 <body>
     <h2>Add New Artwork</h2>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         Title: <input type="text" name="title" required><br><br>
         Medium: <input type="text" name="medium" required><br><br>
-        Image Path: <input type="text" name="image_path"><br><br>
+        Upload Image: <input type="file" name="image_file" accept="image/*"><br><br>
         Description: <textarea name="description"></textarea><br><br>
         Date: <input type="date" name="created_on"><br><br>
         <button type="submit">Save Artwork</button>

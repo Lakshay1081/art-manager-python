@@ -1,9 +1,29 @@
 from flask import Flask, render_template, request, redirect, session, url_for
-from db import get_connection
+from flask_mysqldb import MySQL
+import os
+import uuid
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # required for session handling
+app.secret_key = 'your_secret_key'
 
+# MySQL Config
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'ROOT'
+app.config['MYSQL_DB'] = 'artist_manager'
+mysql = MySQL(app)
+
+# Upload Config
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Home route redirects to login
 @app.route('/')
 def home():
     return redirect('/login')
@@ -14,18 +34,11 @@ def signup():
         username = request.form['username']
         password = request.form['password']
 
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
-            conn.commit()
-            return redirect('/login')
-        except Exception as e:
-            return f"Error: {e}"
-        finally:
-            cursor.close()
-            conn.close()
+        cur = mysql.connection.cursor()
+        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        mysql.connection.commit()
+        cur.close()
+        return redirect('/login')
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -34,29 +47,29 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id FROM users WHERE username=%s AND password=%s", (username, password))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT user_id FROM users WHERE username=%s AND password=%s", (username, password))
+        user = cur.fetchone()
+        cur.close()
 
         if user:
             session['user_id'] = user[0]
             session['username'] = username
             return redirect('/dashboard')
         else:
-            return "Invalid username or password"
+            return "Invalid credentials"
     return render_template('login.html')
 
-# All imports and routes at the top
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
 
 @app.route('/dashboard')
 def dashboard():
-    if 'username' in session:
-        return render_template('dashboard.html', username=session['username'])
-    else:
+    if 'user_id' not in session:
         return redirect('/login')
+    return render_template('dashboard.html', username=session['username'])
 
 @app.route('/add_artwork', methods=['GET', 'POST'])
 def add_artwork():
@@ -66,20 +79,25 @@ def add_artwork():
     if request.method == 'POST':
         title = request.form['title']
         medium = request.form['medium']
-        image_path = request.form['image_path']
         description = request.form['description']
         created_on = request.form['created_on']
         user_id = session['user_id']
 
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO artworks (user_id, title, medium, image_path, description, created_on)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_id, title, medium, image_path, description, created_on))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        image_file = request.files.get('image_file')
+        image_path = None
+
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            unique_filename = str(uuid.uuid4()) + "_" + filename
+            image_path = os.path.join('uploads', unique_filename)
+            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+
+        cur = mysql.connection.cursor()
+        cur.execute("""INSERT INTO artworks (user_id, title, medium, image_path, description, created_on)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (user_id, title, medium, image_path, description, created_on))
+        mysql.connection.commit()
+        cur.close()
         return redirect('/portfolio')
 
     return render_template('add_artwork.html')
@@ -90,57 +108,52 @@ def portfolio():
         return redirect('/login')
 
     user_id = session['user_id']
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM artworks WHERE user_id = %s ORDER BY created_on DESC", (user_id,))
-    artworks = cursor.fetchall()
-    cursor.close()
-    conn.close()
+    username = session['username']
 
-    return render_template('portfolio.html', username=session['username'], artworks=artworks)
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT title, medium, image_path, description, created_on 
+        FROM artworks 
+        WHERE user_id=%s
+    """, (user_id,))
+    artworks = cur.fetchall()
+    cur.close()
 
-@app.route('template/add_supply', methods=['GET', 'POST'])
+    return render_template('portfolio.html', username=username, artworks=artworks)
+
+
+@app.route('/add_supply', methods=['GET', 'POST'])
 def add_supply():
     if 'user_id' not in session:
         return redirect('/login')
 
     if request.method == 'POST':
         name = request.form['name']
-        cost = request.form['cost']
         quantity = request.form['quantity']
-        purchase_date = request.form['purchase_date']
+        description = request.form['description']
         user_id = session['user_id']
 
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO supplies (user_id, name, cost, quantity, purchase_date)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, name, cost, quantity, purchase_date))
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return redirect('/supplies')
+        cur = mysql.connection.cursor()
+        cur.execute("INSERT INTO supplies (user_id, name, quantity, description) VALUES (%s, %s, %s, %s)",
+                    (user_id, name, quantity, description))
+        mysql.connection.commit()
+        cur.close()
+        return redirect('/view_supplies')
 
     return render_template('add_supply.html')
 
-
-@app.route('/supplies')
-def supplies():
+@app.route('/view_supplies')
+def view_supplies():
     if 'user_id' not in session:
         return redirect('/login')
 
     user_id = session['user_id']
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM supplies WHERE user_id = %s ORDER BY purchase_date DESC", (user_id,))
-    supplies_data = cursor.fetchall()
-    cursor.close()
-    conn.close()
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT name, quantity, description FROM supplies WHERE user_id=%s", (user_id,))
+    supplies = cur.fetchall()
+    cur.close()
 
-    return render_template('view_supplies.html', username=session['username'], supplies=supplies_data)
-
+    return render_template('view_supplies.html', supplies=supplies, username=session['username'])
 
 if __name__ == '__main__':
     app.run(debug=True)
