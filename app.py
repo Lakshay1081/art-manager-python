@@ -100,7 +100,8 @@ def add_artwork():
         cur.close()
         return redirect('/portfolio')
 
-    return render_template('add_artwork.html')
+    return (render_template('add_artwork.html'))
+
 
 @app.route('/portfolio')
 def portfolio():
