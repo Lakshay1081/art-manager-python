@@ -10,7 +10,7 @@ app.secret_key = 'your_secret_key'
 # MySQL Config
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'ROOT'
+app.config['MYSQL_PASSWORD'] = 'hello'
 app.config['MYSQL_DB'] = 'artist_manager'
 mysql = MySQL(app)
 
