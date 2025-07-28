@@ -53,10 +53,11 @@
         {% for title, medium, image_path, description, created_on in artworks %}
         <div class="card">
             {% if image_path %}
-                <img src="{{ url_for('static', filename=image_path) }}" alt="{{ title }}">
+            <img src="{{ url_for('static', filename=image_path|safe) }}" alt="{{ title }}">
             {% else %}
-                <div style="height:200px; display:flex; align-items:center; justify-content:center; background:#ddd;">No Image</div>
+            <div style="height:200px; display:flex; align-items:center; justify-content:center; background:#ddd;">No Image</div>
             {% endif %}
+
             <div class="card-body">
                 <h4>{{ title }}</h4>
                 <p><strong>Medium:</strong> {{ medium }}</p>

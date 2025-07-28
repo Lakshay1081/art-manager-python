@@ -10,7 +10,7 @@ app.secret_key = 'your_secret_key'
 # MySQL Config
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'hello'
+app.config['MYSQL_PASSWORD'] = 'ROOT'
 app.config['MYSQL_DB'] = 'artist_manager'
 mysql = MySQL(app)
 
@@ -86,11 +86,14 @@ def add_artwork():
         image_file = request.files.get('image_file')
         image_path = None
 
-        if image_file and allowed_file(image_file.filename):
-            filename = secure_filename(image_file.filename)
-            unique_filename = str(uuid.uuid4()) + "_" + filename
-            image_path = os.path.join('uploads', unique_filename)
-            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        image_file = request.files.get('image_file')
+        if image_file:
+            unique_filename = str(uuid.uuid4()) + "_" + image_file.filename
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename).replace("\\", "/")
+            image_file.save(image_path)
+            image_path = os.path.join('uploads', unique_filename).replace("\\", "/")  # Save this to DB
+        else:
+            image_path = None
 
         cur = mysql.connection.cursor()
         cur.execute("""INSERT INTO artworks (user_id, title, medium, image_path, description, created_on)
