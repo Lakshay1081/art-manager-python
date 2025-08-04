@@ -3,45 +3,105 @@
 <head>
     <title>{{ username }}'s Art Portfolio</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; }
-        h2 { text-align: center; margin-top: 20px; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 30px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 32px;
+            color: #333;
+        }
+
         .add-btn {
             display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            background-color: #2f3538;
-            color: white;
-            border: none;
+            width: 220px;
+            margin: 0 auto 30px auto;
+            padding: 12px 20px;
+            background-color: #222;
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
             border-radius: 8px;
             font-weight: bold;
-            text-decoration: none;
+            transition: background 0.3s ease;
         }
-        .portfolio-grid {
+
+        .add-btn:hover {
+            background-color: #444;
+        }
+
+        .portfolio-container {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-            gap: 20px;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
         }
-        .card {
-            background: white;
-            width: 250px;
-            border-radius: 8px;
+
+        .artwork-card {
+            display: flex;
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
+            flex-direction: row;
+            transition: transform 0.3s ease;
         }
-        .card img {
-            width: 100%;
-            height: 200px;
+
+        .artwork-card:hover {
+            transform: scale(1.01);
+        }
+
+        .artwork-image {
+            width: 50%;
             object-fit: cover;
-            background: #ddd;
+            height: auto;
         }
-        .card-body {
-            padding: 10px;
+
+        .artwork-info {
+            padding: 20px;
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .card-body p {
+
+        .artwork-info h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 22px;
+            color: #111;
+        }
+
+        .artwork-info p {
             margin: 5px 0;
+            font-size: 16px;
+            color: #444;
+        }
+
+        .artwork-info p strong {
+            color: #222;
+        }
+
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            .artwork-card {
+                flex-direction: column;
+            }
+
+            .artwork-image,
+            .artwork-info {
+                width: 100%;
+            }
+
+            .artwork-image {
+                height: auto;
+            }
         }
     </style>
 </head>
@@ -49,17 +109,16 @@
     <h2>{{ username }}'s Art Portfolio</h2>
     <a href="/add_artwork" class="add-btn">Add New Artwork</a>
 
-    <div class="portfolio-grid">
+    <div class="portfolio-container">
         {% for title, medium, image_path, description, created_on in artworks %}
-        <div class="card">
+        <div class="artwork-card">
             {% if image_path %}
-            <img src="{{ url_for('static', filename=image_path|safe) }}" alt="{{ title }}">
+            <img src="{{ url_for('static', filename=image_path|safe) }}" class="artwork-image" alt="{{ title }}">
             {% else %}
-            <div style="height:200px; display:flex; align-items:center; justify-content:center; background:#ddd;">No Image</div>
+            <div class="artwork-image" style="background:#ccc; height:300px; display:flex; align-items:center; justify-content:center;">No Image</div>
             {% endif %}
-
-            <div class="card-body">
-                <h4>{{ title }}</h4>
+            <div class="artwork-info">
+                <h3>{{ title }}</h3>
                 <p><strong>Medium:</strong> {{ medium }}</p>
                 <p><strong>Date:</strong> {{ created_on }}</p>
                 <p>{{ description }}</p>
