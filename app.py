@@ -2,7 +2,13 @@ from flask import Flask, render_template, request, redirect, session, url_for
 from flask_mysqldb import MySQL
 import os
 import uuid
+import json
+import MySQLdb.cursors
+from datetime import date
+from collections import defaultdict
+
 from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -133,31 +139,104 @@ def add_supply():
 
     if request.method == 'POST':
         name = request.form['name']
+        cost = request.form['cost']
         quantity = request.form['quantity']
-        description = request.form['description']
+        purchase_date = request.form['purchase_date']
+        category = request.form['category']
         user_id = session['user_id']
 
         cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO supplies (user_id, name, quantity, description) VALUES (%s, %s, %s, %s)",
-                    (user_id, name, quantity, description))
+        cur.execute("""
+            INSERT INTO supplies (user_id, name, cost, quantity, purchase_date, category)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, name, cost, quantity, purchase_date, category))
         mysql.connection.commit()
         cur.close()
         return redirect('/view_supplies')
 
-    return render_template('add_supply.html')
+    return render_template('add_supply.html', current_date=date.today().isoformat())
 
 @app.route('/view_supplies')
 def view_supplies():
-    if 'user_id' not in session:
+    if 'username' not in session:
         return redirect('/login')
 
-    user_id = session['user_id']
+    username = session['username']
     cur = mysql.connection.cursor()
-    cur.execute("SELECT name, quantity, description FROM supplies WHERE user_id=%s", (user_id,))
-    supplies = cur.fetchall()
+    cur.execute("SELECT user_id FROM users WHERE username = %s", [username])
+    user = cur.fetchone()
+
+    if not user:
+        return redirect('/login')
+
+    user_id = user[0]
+
+    # Get filter parameters
+    selected_category = request.args.get('category', '')
+    from_date = request.args.get('from', '')
+    to_date = request.args.get('to', '')
+
+    # Build dynamic query
+    query = "SELECT name, cost, quantity, purchase_date, category FROM supplies WHERE user_id = %s"
+    filters = [user_id]
+
+    if selected_category:
+        query += " AND category = %s"
+        filters.append(selected_category)
+    if from_date:
+        query += " AND purchase_date >= %s"
+        filters.append(from_date)
+    if to_date:
+        query += " AND purchase_date <= %s"
+        filters.append(to_date)
+
+    cur.execute(query, filters)
+    rows = cur.fetchall()
     cur.close()
 
-    return render_template('view_supplies.html', supplies=supplies, username=session['username'])
+    # Prepare data for template
+    supply_data = []
+    chart_names = []
+    chart_costs = []
+    chart_quantities = []
+    category_totals = defaultdict(float)
 
+    for row in rows:
+        name, cost, quantity, date, category = row
+        supply_data.append({
+            'name': name,
+            'cost': float(cost),
+            'quantity': int(quantity),
+            'purchase_date': date.strftime("%Y-%m-%d"),
+            'category': category
+        })
+        chart_names.append(name)
+        chart_costs.append(float(cost))
+        chart_quantities.append(int(quantity))
+        category_totals[category] += float(cost)
+
+    # Top 5 expensive
+    top5 = sorted(rows, key=lambda x: float(x[1]), reverse=True)[:5]
+    top5_names = [x[0] for x in top5]
+    top5_costs = [float(x[1]) for x in top5]
+
+    # Distinct categories for dropdown
+    category_list = list({s['category'] for s in supply_data})
+
+    return render_template("view_supplies.html",
+                           username=username,
+                           supplies=supply_data,
+                           supply_data=supply_data,
+                           chart_names=chart_names,
+                           chart_costs=chart_costs,
+                           chart_quantities=chart_quantities,
+                           category_labels=list(category_totals.keys()),
+                           category_values=list(category_totals.values()),
+                           top5_names=top5_names,
+                           top5_costs=top5_costs,
+                           categories=category_list,
+                           selected_category=selected_category,
+                           from_date=from_date,
+                           to_date=to_date)
 if __name__ == '__main__':
     app.run(debug=True)
