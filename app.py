@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for,flash
 from flask_mysqldb import MySQL
 import os
 import uuid
 import json
 import MySQLdb.cursors
+import re
 from datetime import date
 from collections import defaultdict
-
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 
@@ -37,34 +38,121 @@ def home():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email'].strip().lower()
+        username = request.form['username'].strip()
         password = request.form['password']
+        confirm_password = request.form['confirm_password']
 
+        # -------- Email validation --------
+        if not email:
+            flash("Email is required.", "error")
+            return redirect('/signup')
+
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Invalid email format.", "error")
+            return redirect('/signup')
+
+        if "@" in email:
+            domain = email.split("@")[1]
+            if domain in ["gmial.com", "gmaill.com"]:  # Example suspicious domains
+                flash("Email domain looks suspicious. Did you mean gmail.com?", "error")
+                return redirect('/signup')
+
+        # -------- Username validation --------
+        if not username:
+            flash("Username is required.", "error")
+            return redirect('/signup')
+
+        if not (3 <= len(username) <= 20):
+            flash("Username must be between 3 and 20 characters.", "error")
+            return redirect('/signup')
+
+        if not re.match(r"^[A-Za-z0-9_]+$", username):
+            flash("Username can only contain letters, numbers, and underscores.", "error")
+            return redirect('/signup')
+
+        if username.lower() in ["admin", "root"]:
+            flash("Username is reserved. Choose another.", "error")
+            return redirect('/signup')
+
+        # -------- Password validation --------
+        if not password:
+            flash("Password is required.", "error")
+            return redirect('/signup')
+
+        if not (8 <= len(password) <= 64):
+            flash("Password must be between 8 and 64 characters.", "error")
+            return redirect('/signup')
+
+        if not re.search(r"[A-Z]", password):
+            flash("Password must contain at least one uppercase letter.", "error")
+            return redirect('/signup')
+
+        if not re.search(r"[a-z]", password):
+            flash("Password must contain at least one lowercase letter.", "error")
+            return redirect('/signup')
+
+        if not re.search(r"\d", password):
+            flash("Password must contain at least one digit.", "error")
+            return redirect('/signup')
+
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            flash("Password must contain at least one special character.", "error")
+            return redirect('/signup')
+
+        if password.strip() != password:
+            flash("Password must not have leading or trailing spaces.", "error")
+            return redirect('/signup')
+
+        # -------- Confirm password --------
+        if confirm_password != password:
+            flash("Passwords do not match.", "error")
+            return redirect('/signup')
+
+        # -------- Check existing user --------
         cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        cur.execute("SELECT * FROM users WHERE username = %s OR email = %s", (username, email))
+        existing = cur.fetchone()
+        if existing:
+            flash("Username or email already exists.", "error")
+            cur.close()
+            return redirect('/signup')
+
+        # -------- Save new user --------
+        hashed_password = generate_password_hash(password)
+        cur.execute("INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+                    (username, email, hashed_password))
         mysql.connection.commit()
         cur.close()
+
+        flash("Signup successful. Please login.", "success")
         return redirect('/login')
+
     return render_template('signup.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form['username'].strip()
+        password_input = request.form['password']
 
         cur = mysql.connection.cursor()
-        cur.execute("SELECT user_id FROM users WHERE username=%s AND password=%s", (username, password))
+        cur.execute("SELECT user_id, password FROM users WHERE username = %s", [username])
         user = cur.fetchone()
         cur.close()
 
-        if user:
-            session['user_id'] = user[0]
-            session['username'] = username
-            return redirect('/dashboard')
-        else:
-            return "Invalid credentials"
+        if not user or not check_password_hash(user[1], password_input):
+            flash("Invalid username or password.", "error")
+            return redirect('/login')
+
+        session['username'] = username
+        session['user_id'] = user[0]
+
+        return redirect('/dashboard')
+
     return render_template('login.html')
+
 
 @app.route('/logout')
 def logout():
@@ -92,25 +180,23 @@ def add_artwork():
         image_file = request.files.get('image_file')
         image_path = None
 
-        image_file = request.files.get('image_file')
-        if image_file:
-            unique_filename = str(uuid.uuid4()) + "_" + image_file.filename
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename).replace("\\", "/")
             image_file.save(image_path)
-            image_path = os.path.join('uploads', unique_filename).replace("\\", "/")  # Save this to DB
-        else:
-            image_path = None
+            image_path = os.path.join('uploads', unique_filename).replace("\\", "/")  # path saved in DB
 
         cur = mysql.connection.cursor()
-        cur.execute("""INSERT INTO artworks (user_id, title, medium, image_path, description, created_on)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (user_id, title, medium, image_path, description, created_on))
+        cur.execute("""
+            INSERT INTO artworks (user_id, title, medium, image_path, description, created_on)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, title, medium, image_path, description, created_on))
         mysql.connection.commit()
         cur.close()
         return redirect('/portfolio')
 
-    return (render_template('add_artwork.html'))
-
+    return render_template('add_artwork.html')
 
 @app.route('/portfolio')
 def portfolio():
@@ -158,28 +244,20 @@ def add_supply():
 
 @app.route('/view_supplies')
 def view_supplies():
-    if 'username' not in session:
+    if 'user_id' not in session:
         return redirect('/login')
 
+    user_id = session['user_id']
     username = session['username']
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT user_id FROM users WHERE username = %s", [username])
-    user = cur.fetchone()
 
-    if not user:
-        return redirect('/login')
-
-    user_id = user[0]
-
-    # Get filter parameters
+    # Filters
     selected_category = request.args.get('category', '')
     from_date = request.args.get('from', '')
     to_date = request.args.get('to', '')
 
-    # Build dynamic query
+    # Dynamic query
     query = "SELECT name, cost, quantity, purchase_date, category FROM supplies WHERE user_id = %s"
     filters = [user_id]
-
     if selected_category:
         query += " AND category = %s"
         filters.append(selected_category)
@@ -190,19 +268,17 @@ def view_supplies():
         query += " AND purchase_date <= %s"
         filters.append(to_date)
 
+    cur = mysql.connection.cursor()
     cur.execute(query, filters)
     rows = cur.fetchall()
     cur.close()
 
-    # Prepare data for template
+    # Data processing
     supply_data = []
-    chart_names = []
-    chart_costs = []
-    chart_quantities = []
+    chart_names, chart_costs, chart_quantities = [], [], []
     category_totals = defaultdict(float)
 
-    for row in rows:
-        name, cost, quantity, date, category = row
+    for name, cost, quantity, date, category in rows:
         supply_data.append({
             'name': name,
             'cost': float(cost),
@@ -215,13 +291,10 @@ def view_supplies():
         chart_quantities.append(int(quantity))
         category_totals[category] += float(cost)
 
-    # Top 5 expensive
     top5 = sorted(rows, key=lambda x: float(x[1]), reverse=True)[:5]
     top5_names = [x[0] for x in top5]
     top5_costs = [float(x[1]) for x in top5]
-
-    # Distinct categories for dropdown
-    category_list = list({s['category'] for s in supply_data})
+    category_list = sorted({s['category'] for s in supply_data})
 
     return render_template("view_supplies.html",
                            username=username,

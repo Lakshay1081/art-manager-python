@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f7f3ef;
             font-family: 'Segoe UI', sans-serif;
         }
 
@@ -19,158 +19,197 @@
 
         .filter-panel {
             margin: 20px auto;
-            max-width: 1000px;
-        }
-
-        canvas {
-            margin: 40px auto;
-            display: block;
-            max-width: 90%;
+            max-width: 1100px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .table-responsive {
             margin: 30px auto;
-            max-width: 1000px;
+            max-width: 1100px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
 
-        .btn {
-            margin-right: 10px;
-        }
-
-        label {
-            font-weight: 500;
+        .chart-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .chart-title {
             text-align: center;
-            margin-top: 20px;
+            margin-bottom: 15px;
             font-weight: 500;
         }
 
-        .filters-row {
-            gap: 10px;
+        .chart-container {
+            position: relative;
+            height: 400px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>🎨 Lakshay Pareek's Art Supplies</h2>
+<div class="container">
+    <h2>🎨 Lakshay Pareek's Art Supplies</h2>
 
-        <!-- FILTER PANEL -->
-        <form method="GET" class="row g-3 filter-panel justify-content-center align-items-center filters-row">
-            <div class="col-auto">
-                <label for="category">Filter by Category:</label>
-                <select name="category" class="form-select">
-                    <option value="">All</option>
-                    {% for c in categories %}
-                        <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <label for="from">From:</label>
-                <input type="date" name="from" class="form-control" value="{{ from_date }}">
-            </div>
-            <div class="col-auto">
-                <label for="to">To:</label>
-                <input type="date" name="to" class="form-control" value="{{ to_date }}">
-            </div>
-            <div class="col-auto d-flex align-items-end">
-                <button type="submit" class="btn btn-dark">Apply Filters</button>
-            </div>
-            <div class="col-auto d-flex align-items-end">
-                <a href="/download_chart" class="btn btn-outline-primary">Download Chart</a>
-                <a href="/export_csv" class="btn btn-outline-success">Export CSV</a>
-            </div>
-        </form>
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered mt-4">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>Cost (₹)</th>
-                        <th>Quantity</th>
-                        <th>Purchase Date</th>
-                        <th>Category</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for supply in supplies %}
-                    <tr>
-                        <td>{{ supply.name }}</td>
-                        <td>{{ supply.cost }}</td>
-                        <td>{{ supply.quantity }}</td>
-                        <td>{{ supply.purchase_date }}</td>
-                        <td>{{ supply.category or "Uncategorized" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- FILTER PANEL -->
+    <form method="GET" class="row g-3 filter-panel align-items-center">
+        <div class="col-md-3">
+            <label for="category">Filter by Category:</label>
+            <select name="category" class="form-select">
+                <option value="">All</option>
+                {% for c in categories %}
+                    <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
         </div>
-        <!-- CHARTS -->
-        <div class="chart-section">
-            <h5 class="chart-title">Cost vs Quantity</h5>
-            <canvas id="costQuantityChart"></canvas>
+        <div class="col-md-3">
+            <label for="from">From:</label>
+            <input type="date" name="from" class="form-control" value="{{ from_date }}">
+        </div>
+        <div class="col-md-3">
+            <label for="to">To:</label>
+            <input type="date" name="to" class="form-control" value="{{ to_date }}">
+        </div>
+        <div class="col-md-3 d-flex justify-content-end align-items-end gap-2">
+            <button type="submit" class="btn btn-dark">Apply Filters</button>
+            <a href="/export_csv" class="btn btn-outline-success">Export CSV</a>
+        </div>
+    </form>
 
-            <h5 class="chart-title">Category-wise Spend</h5>
-            <canvas id="categoryPieChart"></canvas>
+    <!-- TABLE -->
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Cost (₹)</th>
+                    <th>Quantity</th>
+                    <th>Purchase Date</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supply in supplies %}
+                <tr>
+                    <td>{{ supply.name }}</td>
+                    <td>{{ supply.cost }}</td>
+                    <td>{{ supply.quantity }}</td>
+                    <td>{{ supply.purchase_date }}</td>
+                    <td>{{ supply.category or "Uncategorized" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-            <h5 class="chart-title">Top 5 Most Expensive Supplies</h5>
-            <canvas id="top5Chart"></canvas>
+    <!-- CHARTS -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chart-card">
+                <h5 class="chart-title">Cost vs Quantity</h5>
+                <div class="chart-container">
+                    <canvas id="costQuantityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="chart-card">
+                <h5 class="chart-title">Category-wise Spend</h5>
+                <div class="chart-container">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Chart JS DATA -->
-    <script>
-  const supplyData = {{ supply_data | tojson }};
+    <div class="row">
+        <div class="col-md-12">
+            <div class="chart-card">
+                <h5 class="chart-title">Top 5 Most Expensive Supplies</h5>
+                <div class="chart-container">
+                    <canvas id="top5Chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Embed chart data -->
+<script id="chart-data" type="application/json">
+{
+  "chart_names": {{ chart_names | tojson }},
+  "chart_costs": {{ chart_costs | tojson }},
+  "chart_quantities": {{ chart_quantities | tojson }},
+  "top5_names": {{ top5_names | tojson }},
+  "top5_costs": {{ top5_costs | tojson }},
+  "category_labels": {{ category_labels | tojson }},
+  "category_values": {{ category_values | tojson }}
+}
 </script>
 
-    <script>
-        const supplyNames = {{ chart_names|tojson }};
-        const costs = {{ chart_costs|tojson }};
-        const quantities = {{ chart_quantities|tojson }};
-        const topNames = {{ top5_names|tojson }};
-        const topCosts = {{ top5_costs|tojson }};
-        const catLabels = {{ category_labels|tojson }};
-        const catValues = {{ category_values|tojson }};
+<!-- JS -->
+<script>
+    const chartDataEl = document.getElementById('chart-data');
+    const {
+        chart_names,
+        chart_costs,
+        chart_quantities,
+        top5_names,
+        top5_costs,
+        category_labels,
+        category_values
+    } = JSON.parse(chartDataEl.textContent);
 
-        new Chart(document.getElementById('costQuantityChart'), {
-            type: 'bar',
-            data: {
-                labels: supplyNames,
-                datasets: [
-                    { label: 'Cost (₹)', data: costs, backgroundColor: '#00bcd4' },
-                    { label: 'Quantity', data: quantities, backgroundColor: '#9c27b0' }
-                ]
-            },
-            options: { responsive: true }
-        });
+    // Cost vs Quantity
+    new Chart(document.getElementById('costQuantityChart'), {
+        type: 'bar',
+        data: {
+            labels: chart_names,
+            datasets: [
+                { label: 'Cost (₹)', data: chart_costs, backgroundColor: '#00bcd4' },
+                { label: 'Quantity', data: chart_quantities, backgroundColor: '#9c27b0' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
 
-        new Chart(document.getElementById('categoryPieChart'), {
-            type: 'pie',
-            data: {
-                labels: catLabels,
-                datasets: [{
-                    data: catValues,
-                    backgroundColor: ['#f06292', '#42a5f5', '#66bb6a', '#ffb74d', '#ba68c8', '#90a4ae', '#d4e157']
-                }]
-            }
-        });
+    // Category Pie
+    new Chart(document.getElementById('categoryPieChart'), {
+        type: 'pie',
+        data: {
+            labels: category_labels,
+            datasets: [{
+                data: category_values,
+                backgroundColor: ['#f06292', '#42a5f5', '#66bb6a', '#ffb74d', '#ba68c8', '#90a4ae', '#d4e157']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
 
-        new Chart(document.getElementById('top5Chart'), {
-            type: 'bar',
-            data: {
-                labels: topNames,
-                datasets: [{
-                    label: 'Top 5 Most Expensive Supplies (₹)',
-                    data: topCosts,
-                    backgroundColor: '#ff4081'
-                }]
-            },
-            options: { responsive: true }
-        });
-    </script>
+    // Top 5
+    new Chart(document.getElementById('top5Chart'), {
+        type: 'bar',
+        data: {
+            labels: top5_names,
+            datasets: [{
+                label: 'Cost (₹)',
+                data: top5_costs,
+                backgroundColor: '#ff4081'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
 
 </body>
 </html>

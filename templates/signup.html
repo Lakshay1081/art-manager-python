@@ -1,16 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SIGN UP</title>
+    <title>Sign Up</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <h2>Sign up</h2>
-<form method="post">
-    Username:<input type="text" name="username" required><br><br>
-    Password:<input type="password" name="password" required><br><br>
-    <button type="submit">Register</button>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul>
+    {% for category, message in messages %}
+      <li class="{{ category }}">{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<!-- signup.html -->
+<form id="signupForm" method="POST" action="/signup">
+    <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" required>
+        <span class="error-message" id="usernameError"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" required>
+        <span class="error-message" id="emailError"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+        <span class="error-message" id="passwordError"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="confirm_password">Confirm Password</label>
+        <input type="password" name="confirm_password" id="confirm_password" required>
+        <span class="error-message" id="confirmPasswordError"></span>
+    </div>
+
+    <button type="submit">Sign Up</button>
 </form>
-<p>Already have an account ? <a href="/login">Login Here</a></p>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const username = document.getElementById("username");
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const confirmPassword = document.getElementById("confirm_password");
+
+    const usernameError = document.getElementById("usernameError");
+    const emailError = document.getElementById("emailError");
+    const passwordError = document.getElementById("passwordError");
+    const confirmPasswordError = document.getElementById("confirmPasswordError");
+
+    username.addEventListener("input", function () {
+        const val = username.value.trim();
+        if (val.length < 4) {
+            usernameError.textContent = "Username must be at least 4 characters.";
+        } else if (!/^[a-zA-Z0-9]+$/.test(val)) {
+            usernameError.textContent = "Only alphanumeric characters allowed.";
+        } else {
+            usernameError.textContent = "";
+        }
+    });
+
+    email.addEventListener("input", function () {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        emailError.textContent = emailPattern.test(email.value) ? "" : "Enter a valid email.";
+    });
+
+    password.addEventListener("input", function () {
+        if (password.value.length < 6) {
+            passwordError.textContent = "Password must be at least 6 characters.";
+        } else if (!/[A-Za-z]/.test(password.value) || !/\d/.test(password.value)) {
+            passwordError.textContent = "Must include at least 1 letter & 1 digit.";
+        } else {
+            passwordError.textContent = "";
+        }
+    });
+
+    confirmPassword.addEventListener("input", function () {
+        confirmPasswordError.textContent = 
+            confirmPassword.value === password.value ? "" : "Passwords do not match.";
+    });
+
+    document.getElementById("signupForm").addEventListener("submit", function (e) {
+        if (usernameError.textContent || emailError.textContent || passwordError.textContent || confirmPasswordError.textContent) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+
+
+<p>Already have an account? <a href="/login">Login here</a></p>
 </body>
 </html>
