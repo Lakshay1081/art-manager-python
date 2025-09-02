@@ -1,15 +1,13 @@
-from flask import Flask, render_template, request, redirect, session, url_for,flash
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from flask_mysqldb import MySQL
 import os
 import uuid
-import json
-import MySQLdb.cursors
 import re
 from datetime import date
 from collections import defaultdict
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -30,11 +28,22 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Home route redirects to login
+# Decorator to require login
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please login first.", "error")
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Home redirects to login
 @app.route('/')
 def home():
     return redirect('/login')
 
+# Signup
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -43,94 +52,37 @@ def signup():
         password = request.form['password']
         confirm_password = request.form['confirm_password']
 
-        # -------- Email validation --------
-        if not email:
-            flash("Email is required.", "error")
+        # Basic validation (email, username, password)
+        if not email or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Invalid email.", "error")
             return redirect('/signup')
 
-        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-            flash("Invalid email format.", "error")
+        if not username or not re.match(r"^[A-Za-z0-9_]{3,20}$", username):
+            flash("Invalid username.", "error")
             return redirect('/signup')
 
-        if "@" in email:
-            domain = email.split("@")[1]
-            if domain in ["gmial.com", "gmaill.com"]:  # Example suspicious domains
-                flash("Email domain looks suspicious. Did you mean gmail.com?", "error")
-                return redirect('/signup')
-
-        # -------- Username validation --------
-        if not username:
-            flash("Username is required.", "error")
-            return redirect('/signup')
-
-        if not (3 <= len(username) <= 20):
-            flash("Username must be between 3 and 20 characters.", "error")
-            return redirect('/signup')
-
-        if not re.match(r"^[A-Za-z0-9_]+$", username):
-            flash("Username can only contain letters, numbers, and underscores.", "error")
-            return redirect('/signup')
-
-        if username.lower() in ["admin", "root"]:
-            flash("Username is reserved. Choose another.", "error")
-            return redirect('/signup')
-
-        # -------- Password validation --------
-        if not password:
-            flash("Password is required.", "error")
-            return redirect('/signup')
-
-        if not (8 <= len(password) <= 64):
-            flash("Password must be between 8 and 64 characters.", "error")
-            return redirect('/signup')
-
-        if not re.search(r"[A-Z]", password):
-            flash("Password must contain at least one uppercase letter.", "error")
-            return redirect('/signup')
-
-        if not re.search(r"[a-z]", password):
-            flash("Password must contain at least one lowercase letter.", "error")
-            return redirect('/signup')
-
-        if not re.search(r"\d", password):
-            flash("Password must contain at least one digit.", "error")
-            return redirect('/signup')
-
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-            flash("Password must contain at least one special character.", "error")
-            return redirect('/signup')
-
-        if password.strip() != password:
-            flash("Password must not have leading or trailing spaces.", "error")
-            return redirect('/signup')
-
-        # -------- Confirm password --------
-        if confirm_password != password:
+        if password != confirm_password:
             flash("Passwords do not match.", "error")
             return redirect('/signup')
 
-        # -------- Check existing user --------
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM users WHERE username = %s OR email = %s", (username, email))
-        existing = cur.fetchone()
-        if existing:
+        if cur.fetchone():
             flash("Username or email already exists.", "error")
             cur.close()
             return redirect('/signup')
 
-        # -------- Save new user --------
         hashed_password = generate_password_hash(password)
         cur.execute("INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
                     (username, email, hashed_password))
         mysql.connection.commit()
         cur.close()
-
         flash("Signup successful. Please login.", "success")
         return redirect('/login')
 
     return render_template('signup.html')
 
-
+# Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -148,28 +100,27 @@ def login():
 
         session['username'] = username
         session['user_id'] = user[0]
-
         return redirect('/dashboard')
 
     return render_template('login.html')
 
-
+# Logout
 @app.route('/logout')
 def logout():
     session.clear()
+    flash("Logged out successfully.", "success")
     return redirect('/login')
 
+# Dashboard
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    if 'user_id' not in session:
-        return redirect('/login')
     return render_template('dashboard.html', username=session['username'])
 
+# Add Artwork
 @app.route('/add_artwork', methods=['GET', 'POST'])
+@login_required
 def add_artwork():
-    if 'user_id' not in session:
-        return redirect('/login')
-
     if request.method == 'POST':
         title = request.form['title']
         medium = request.form['medium']
@@ -179,13 +130,11 @@ def add_artwork():
 
         image_file = request.files.get('image_file')
         image_path = None
-
         if image_file and allowed_file(image_file.filename):
             filename = secure_filename(image_file.filename)
             unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename).replace("\\", "/")
-            image_file.save(image_path)
-            image_path = os.path.join('uploads', unique_filename).replace("\\", "/")  # path saved in DB
+            image_path = os.path.join('uploads', unique_filename)
+            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
 
         cur = mysql.connection.cursor()
         cur.execute("""
@@ -194,35 +143,48 @@ def add_artwork():
         """, (user_id, title, medium, image_path, description, created_on))
         mysql.connection.commit()
         cur.close()
+        flash("Artwork added successfully!", "success")
         return redirect('/portfolio')
 
     return render_template('add_artwork.html')
 
+# Portfolio
 @app.route('/portfolio')
+@login_required
 def portfolio():
-    if 'user_id' not in session:
-        return redirect('/login')
-
     user_id = session['user_id']
     username = session['username']
 
     cur = mysql.connection.cursor()
-    cur.execute("""
-        SELECT title, medium, image_path, description, created_on 
-        FROM artworks 
-        WHERE user_id=%s
-    """, (user_id,))
+    cur.execute("SELECT about_me FROM users WHERE user_id=%s", (user_id,))
+    about_me_row = cur.fetchone()
+    about_me = about_me_row[0] if about_me_row else ""
+
+    cur.execute("SELECT title, medium, image_path, description, created_on FROM artworks WHERE user_id=%s", (user_id,))
     artworks = cur.fetchall()
     cur.close()
+    return render_template('portfolio.html', username=username, about_me=about_me, artworks=artworks, editable=True)
 
-    return render_template('portfolio.html', username=username, artworks=artworks)
+# Update About Me
+@app.route('/update_about', methods=['POST'])
+@login_required
+def update_about():
+    user_id = session['user_id']
+    about_me = request.form.get('about_me', '')
+
+    cur = mysql.connection.cursor()
+    cur.execute("UPDATE users SET about_me = %s WHERE user_id = %s", (about_me, user_id))
+    mysql.connection.commit()
+    cur.close()
+
+    flash("About Me updated successfully!", "success")
+    return redirect('/portfolio')
 
 
+# Add Supply
 @app.route('/add_supply', methods=['GET', 'POST'])
+@login_required
 def add_supply():
-    if 'user_id' not in session:
-        return redirect('/login')
-
     if request.method == 'POST':
         name = request.form['name']
         cost = request.form['cost']
@@ -238,24 +200,21 @@ def add_supply():
         """, (user_id, name, cost, quantity, purchase_date, category))
         mysql.connection.commit()
         cur.close()
+        flash("Supply added successfully!", "success")
         return redirect('/view_supplies')
 
     return render_template('add_supply.html', current_date=date.today().isoformat())
 
+# View Supplies
 @app.route('/view_supplies')
+@login_required
 def view_supplies():
-    if 'user_id' not in session:
-        return redirect('/login')
-
     user_id = session['user_id']
-    username = session['username']
 
-    # Filters
     selected_category = request.args.get('category', '')
     from_date = request.args.get('from', '')
     to_date = request.args.get('to', '')
 
-    # Dynamic query
     query = "SELECT name, cost, quantity, purchase_date, category FROM supplies WHERE user_id = %s"
     filters = [user_id]
     if selected_category:
@@ -273,17 +232,16 @@ def view_supplies():
     rows = cur.fetchall()
     cur.close()
 
-    # Data processing
     supply_data = []
     chart_names, chart_costs, chart_quantities = [], [], []
     category_totals = defaultdict(float)
 
-    for name, cost, quantity, date, category in rows:
+    for name, cost, quantity, purchase_date, category in rows:
         supply_data.append({
             'name': name,
             'cost': float(cost),
             'quantity': int(quantity),
-            'purchase_date': date.strftime("%Y-%m-%d"),
+            'purchase_date': purchase_date.strftime("%Y-%m-%d"),
             'category': category
         })
         chart_names.append(name)
@@ -294,12 +252,10 @@ def view_supplies():
     top5 = sorted(rows, key=lambda x: float(x[1]), reverse=True)[:5]
     top5_names = [x[0] for x in top5]
     top5_costs = [float(x[1]) for x in top5]
-    category_list = sorted({s['category'] for s in supply_data})
 
     return render_template("view_supplies.html",
-                           username=username,
+                           username=session['username'],
                            supplies=supply_data,
-                           supply_data=supply_data,
                            chart_names=chart_names,
                            chart_costs=chart_costs,
                            chart_quantities=chart_quantities,
@@ -307,9 +263,10 @@ def view_supplies():
                            category_values=list(category_totals.values()),
                            top5_names=top5_names,
                            top5_costs=top5_costs,
-                           categories=category_list,
+                           categories=list(category_totals.keys()),
                            selected_category=selected_category,
                            from_date=from_date,
                            to_date=to_date)
+
 if __name__ == '__main__':
     app.run(debug=True)

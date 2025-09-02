@@ -2,19 +2,133 @@
 <html>
 <head>
     <title>Add Artwork</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ecd9c6;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header (same as portfolio) */
+        header {
+            background-color: #a26b4b;
+            color: #fff;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 4px solid #d9b89c;
+        }
+
+        header h2 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav-buttons a {
+            padding: 10px 18px;
+            background-color: #fff;
+            color: #a26b4b;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .nav-buttons a:hover {
+            background-color: #d9b89c;
+            color: #fff;
+        }
+
+        /* Form container */
+        .form-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        }
+
+        .form-container h3 {
+            text-align: center;
+            color: #a26b4b;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"], input[type="date"], input[type="file"], textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #a26b4b;
+            color: #fff;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #d9b89c;
+            color: #fff;
+        }
+
+        @media (max-width:768px){
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .nav-buttons {
+                justify-content: flex-start;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Add New Artwork</h2>
-    <form method="POST" enctype="multipart/form-data">
-        Title: <input type="text" name="title" required><br><br>
-        Medium: <input type="text" name="medium" required><br><br>
-        Upload Image: <input type="file" name="image_file" accept="image/*"><br><br>
-        Description: <textarea name="description"></textarea><br><br>
-        Date: <input type="date" name="created_on"><br><br>
-        <button type="submit">Save Artwork</button>
-    </form>
-    <br>
-    <a href="/portfolio">View Portfolio</a>
+    <header>
+        <h2>{{ username }}'s Art Profile</h2>
+        <div class="nav-buttons">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/add_artwork">Add Artwork</a>
+            <a href="/view_supplies">Art Supplies</a>
+            <a href="/profile">Profile</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </header>
+
+    <div class="form-container">
+        <h3>Add New Artwork</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="text" name="title" placeholder="Artwork Title" required>
+            <input type="text" name="medium" placeholder="Medium" required>
+            <input type="file" name="image_file" accept="image/*">
+            <textarea name="description" placeholder="Description"></textarea>
+            <input type="date" name="created_on">
+            <button type="submit">Save Artwork</button>
+        </form>
+        <br>
+        <a href="/portfolio" style="display:block; text-align:center; margin-top:10px; color:#a26b4b;">View Portfolio</a>
+    </div>
 </body>
 </html>

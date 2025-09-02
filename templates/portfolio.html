@@ -1,29 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link href='https://fonts.googleapis.com/css?family=Sofia' rel='stylesheet'>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <title>{{ username }}'s Art Portfolio</title>
     <style>
         body {
-            font-family: 'Sofia', sans-serif;
-            background-color: #f9f9f9;
+            font-family: 'Poppins', sans-serif;
+            background-color: #ecd9c6;
             margin: 0;
-            padding: 30px;
+            padding: 0;
         }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 32px;
-            color: #333;
+        header {
+            background-color: #a26b4b;
+            color: #fff;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 4px solid #d9b89c;
         }
+
+        header h2 { margin: 0; font-size: 28px; }
+
+        .nav-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        .nav-buttons a {
+            padding: 10px 18px;
+            background-color: #fff;
+            color: #a26b4b;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.3s, color 0.3s;
+        }
+        .nav-buttons a:hover { background-color: #d9b89c; color: #fff; }
 
         .add-btn {
             display: block;
             width: 220px;
-            margin: 0 auto 30px auto;
+            margin: 30px auto;
             padding: 12px 20px;
-            background-color: #222;
+            background-color: #a26b4b;
             color: #fff;
             text-align: center;
             text-decoration: none;
@@ -31,9 +49,31 @@
             font-weight: bold;
             transition: background 0.3s ease;
         }
+        .add-btn:hover { background-color: #d9b89c; color: #fff; }
 
-        .add-btn:hover {
-            background-color: #444;
+        .about-me {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 25px 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .about-me h3 { margin-top: 0; font-size: 28px; color: #a26b4b; }
+        .about-me p { margin-top: 15px; font-size: 18px; color: #444; line-height: 1.6; }
+        .about-me textarea {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            resize: vertical;
+            outline: none;
+        }
+        .about-me textarea:focus {
+            border-color: #a26b4b;
+            box-shadow: 0 0 5px rgba(162, 107, 75, 0.4);
         }
 
         .portfolio-container {
@@ -41,29 +81,21 @@
             flex-direction: column;
             gap: 30px;
             max-width: 1000px;
-            margin: 0 auto;
+            margin: 0 auto 50px auto;
+            padding: 0 15px;
         }
 
         .artwork-card {
             display: flex;
             background: #fff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             border-radius: 12px;
             overflow: hidden;
             flex-direction: row;
             transition: transform 0.3s ease;
         }
-
-        .artwork-card:hover {
-            transform: scale(1.01);
-        }
-
-        .artwork-image {
-            width: 50%;
-            object-fit: cover;
-            height: auto;
-        }
-
+        .artwork-card:hover { transform: scale(1.01); }
+        .artwork-image { width: 50%; object-fit: cover; height: auto; }
         .artwork-info {
             padding: 20px;
             width: 50%;
@@ -72,78 +104,65 @@
             justify-content: flex-start;
             align-items: center;
         }
+        .artwork-info h3 { margin-top: 0; margin-bottom: 10px; font-size: 35px; color: #111; }
+        .artwork-info p { margin: 5px 0; font-size: 20px; color: #444; }
+        .artwork-info p strong { color: #222; }
 
-        .artwork-info h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 35px;
-            color: #111;
-        }
-
-        .artwork-info p {
-            margin: 5px 0;
-            font-size: 20px;
-            color: #444;
-        }
-
-        .artwork-info p strong {
-            color: #222;
-        }
-
-        /* Responsive layout */
         @media (max-width: 768px) {
-            .artwork-card {
-                flex-direction: column;
-            }
-
-            .artwork-image,
-            .artwork-info {
-                width: 100%;
-            }
-
-            .artwork-image {
-                height: auto;
-            }
+            .artwork-card { flex-direction: column; }
+            .artwork-image, .artwork-info { width: 100%; }
+            .artwork-image { height: auto; }
+            header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .nav-buttons { justify-content: flex-start; width: 100%; }
+            .about-me { padding: 20px; }
         }
     </style>
 </head>
 <body>
-    <h2>{{ username }}'s Art Portfolio</h2>
-    <a href="/add_artwork" class="add-btn">Add New Artwork</a>
 
-    <div class="portfolio-container">
-        {% for title, medium, image_path, description, created_on in artworks %}
-        <div class="artwork-card">
-            {% if image_path %}
-            <img src="{{ url_for('static', filename=image_path|safe) }}" class="artwork-image" alt="{{ title }}">
-            {% else %}
-            <div class="artwork-image" style="background:#ccc; height:300px; display:flex; align-items:center; justify-content:center;">No Image</div>
-            {% endif %}
-            <div class="artwork-info">
-                <h3>{{ title }}</h3>
-                <p><strong>Medium:</strong> {{ medium }}</p>
-                <p><strong>Date:</strong> {{ created_on }}</p>
-                <p>{{ description }}</p>
-            </div>
-        </div>
-        {% endfor %}
+<header>
+    <h2>{{ username }}'s Art Profile</h2>
+    <div class="nav-buttons">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/add_artwork">Add Artwork</a>
+        <a href="/view_supplies">Art Supplies</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
     </div>
-    <button id="downloadPortfolio">Download Portfolio</button>
+</header>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script>
-document.getElementById("downloadPortfolio").addEventListener("click", function () {
-    const element = document.getElementById("portfolioSection"); // portfolio container div
-    const opt = {
-        margin: 0.5,
-        filename: 'my_portfolio.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    html2pdf().from(element).set(opt).save();
-});
-</script>
+<!-- About Me Section -->
+<div class="about-me">
+    <h3>About Me</h3>
+
+    {% if editable %}
+    <form action="{{ url_for('update_about') }}" method="POST">
+        <textarea name="about_me" rows="5" placeholder="Tell us about yourself...">{{ about_me }}</textarea>
+        <br>
+        <button type="submit" class="add-btn" style="width:auto; padding:8px 16px; margin-top:10px;">Save</button>
+    </form>
+    {% else %}
+    <p>{{ about_me if about_me else "Tell us something about yourself, your inspirations, and your artistic journey." }}</p>
+    {% endif %}
+</div>
+
+<div class="portfolio-container">
+    {% for title, medium, image_path, description, created_on in artworks %}
+    <div class="artwork-card">
+        {% if image_path %}
+        <img src="{{ url_for('static', filename=image_path|safe) }}" class="artwork-image" alt="{{ title }}">
+        {% else %}
+        <div class="artwork-image" style="background:#ccc; height:300px; display:flex; align-items:center; justify-content:center;">No Image</div>
+        {% endif %}
+        <div class="artwork-info">
+            <h3>{{ title }}</h3>
+            <p><strong>Medium:</strong> {{ medium }}</p>
+            <p><strong>Date:</strong> {{ created_on }}</p>
+            <p>{{ description }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 
 </body>
 </html>
