@@ -133,8 +133,13 @@ def add_artwork():
         if image_file and allowed_file(image_file.filename):
             filename = secure_filename(image_file.filename)
             unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            image_path = os.path.join('uploads', unique_filename)
-            image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+
+            # Save file into static/uploads/
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            image_file.save(save_path)
+
+            # Store path with forward slashes for HTML usage
+            image_path = f"uploads/{unique_filename}"
 
         cur = mysql.connection.cursor()
         cur.execute("""
@@ -146,7 +151,8 @@ def add_artwork():
         flash("Artwork added successfully!", "success")
         return redirect('/portfolio')
 
-    return render_template('add_artwork.html')
+    return render_template('add_artwork.html', username=session['username'])
+
 
 # Portfolio
 @app.route('/portfolio')
@@ -181,7 +187,6 @@ def update_about():
     return redirect('/portfolio')
 
 
-# Add Supply
 @app.route('/add_supply', methods=['GET', 'POST'])
 @login_required
 def add_supply():
@@ -203,7 +208,12 @@ def add_supply():
         flash("Supply added successfully!", "success")
         return redirect('/view_supplies')
 
-    return render_template('add_supply.html', current_date=date.today().isoformat())
+    # ✅ Pass username and current_date into the template
+    return render_template(
+        'add_supply.html',
+        username=session['username'],
+    )
+
 
 # View Supplies
 @app.route('/view_supplies')
